@@ -1,21 +1,15 @@
 import os
 import psycopg2
 from psycopg2.extras import DictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required
-from dotenv import load_dotenv
-
-# .env file load karne ke liye
-load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "DATA_ZONE_PREMIUM_2026"
 
-# Render ke Environment Variable se URL uthayega
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def get_db():
-    # sslmode=require hona zaroori hai
     conn = psycopg2.connect(DATABASE_URL, sslmode='require')
     return conn
 
@@ -23,13 +17,18 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 class User(UserMixin):
-    def __init__(self, id, username, role, download_limit, download_count, is_active):
+    def __init__(self, id, username, role, download_limit, download_count, active_status):
         self.id = id
         self.username = username
         self.role = role
         self.download_limit = download_limit
         self.download_count = download_count
-        self.is_active = is_active
+        # Naam badal kar active_status kar diya taaki conflict na ho
+        self.active_status = active_status 
+
+    @property
+    def is_active(self):
+        return self.active_status
 
 @login_manager.user_loader
 def load_user(user_id):
