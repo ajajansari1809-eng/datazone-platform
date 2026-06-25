@@ -1,13 +1,12 @@
 import os
 import psycopg2
 from psycopg2.extras import DictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 
 app = Flask(__name__)
 app.secret_key = "DATA_ZONE_PREMIUM_2026"
 
-# Database Connection
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def get_db():
@@ -17,16 +16,17 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 class User(UserMixin):
-    def __init__(self, id, username, role, credits, is_active):
+    def __init__(self, id, username, role, credits, active_status):
         self.id = id
         self.username = username
         self.role = role
         self.credits = credits
-        self.is_active = is_active
+        # 'active_status' variable store karega, is_active sirf property hogi
+        self.active_status = active_status
     
     @property
-    def active(self):
-        return self.is_active
+    def is_active(self):
+        return self.active_status
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -49,6 +49,7 @@ def login():
         conn.close()
         
         if user:
+            # Sahi variable pass kar rahe hain
             user_obj = User(user['id'], user['username'], user['role'], user['credits'], user['is_active'])
             login_user(user_obj)
             return redirect(url_for('index'))
@@ -79,3 +80,4 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
+    
