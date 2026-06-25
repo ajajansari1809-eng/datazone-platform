@@ -1,19 +1,21 @@
 import os
 import psycopg2
 from psycopg2.extras import DictCursor
-from datetime import datetime
-import random
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, session
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-import pandas as pd
-import io
-import math
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask_login import LoginManager, UserMixin, login_user, login_required
+from dotenv import load_dotenv
+
+# .env file load karne ke liye
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "DATA_ZONE_PREMIUM_2026"
-DATABASE_URL = "postgresql://postgres:YOUR_PASSWORD@db.pmuvdjatfxfcsymfetnw.supabase.co:5432/postgres"
+
+# Render ke Environment Variable se URL uthayega
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def get_db():
+    # sslmode=require hona zaroori hai
     conn = psycopg2.connect(DATABASE_URL, sslmode='require')
     return conn
 
@@ -50,17 +52,18 @@ def login():
         cur.execute("SELECT * FROM users WHERE username = %s AND password = %s", (username, password))
         user = cur.fetchone()
         conn.close()
+        
         if user:
             user_obj = User(user['id'], user['username'], user['role'], user['download_limit'], user['download_count'], user['is_active'])
             login_user(user_obj)
             return redirect(url_for('index'))
+        
         flash('Invalid login!')
     return render_template('login.html')
 
 @app.route('/')
 @login_required
 def index():
-    # Database se data fetch karne ka logic yahan aayega
     return render_template('index.html')
 
 if __name__ == '__main__':
