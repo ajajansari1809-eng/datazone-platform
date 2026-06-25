@@ -7,6 +7,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 app = Flask(__name__)
 app.secret_key = "DATA_ZONE_PREMIUM_2026"
 
+# Database Connection
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def get_db():
@@ -16,22 +17,22 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 class User(UserMixin):
-    def __init__(self, id, username, role, credits, active_status):
+    def __init__(self, id, username, role, credits, is_active):
         self.id = id
         self.username = username
         self.role = role
         self.credits = credits
-        self.active_status = active_status
+        self.is_active = is_active
     
     @property
-    def is_active(self):
-        return self.active_status
+    def active(self):
+        return self.is_active
 
 @login_manager.user_loader
 def load_user(user_id):
     conn = get_db()
     cur = conn.cursor(cursor_factory=DictCursor)
-    cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    cur.execute("SELECT id, username, role, credits, is_active FROM users WHERE id = %s", (user_id,))
     user = cur.fetchone()
     conn.close()
     return User(user['id'], user['username'], user['role'], user['credits'], user['is_active']) if user else None
@@ -39,7 +40,6 @@ def load_user(user_id):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Yahan username/password check karo, OTP verification ka logic baad mein add karenge
         username = request.form.get('username')
         password = request.form.get('password')
         conn = get_db()
@@ -47,10 +47,12 @@ def login():
         cur.execute("SELECT * FROM users WHERE username = %s AND password = %s", (username, password))
         user = cur.fetchone()
         conn.close()
-        if user and user['is_active']:
-            login_user(User(user['id'], user['username'], user['role'], user['credits'], user['is_active']))
+        
+        if user:
+            user_obj = User(user['id'], user['username'], user['role'], user['credits'], user['is_active'])
+            login_user(user_obj)
             return redirect(url_for('index'))
-        flash('Invalid login or account inactive!')
+        flash('Invalid Username or Password!')
     return render_template('login.html')
 
 @app.route('/')
@@ -62,13 +64,12 @@ def index():
 @login_required
 def download_file(file_id):
     if current_user.credits >= 1:
-        # Deduction Logic
         conn = get_db()
         cur = conn.cursor()
         cur.execute("UPDATE users SET credits = credits - 1 WHERE id = %s", (current_user.id,))
         conn.commit()
         conn.close()
-        return "Downloading file... (Credit deducted)"
+        return f"File {file_id} downloaded! Credits remaining: {current_user.credits - 1}"
     return "Insufficient credits! Please upgrade your plan."
 
 @app.route('/logout')
@@ -78,4 +79,3 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
-    
